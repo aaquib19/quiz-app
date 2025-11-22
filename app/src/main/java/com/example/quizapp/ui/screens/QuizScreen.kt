@@ -121,7 +121,7 @@ fun QuizScreen(
                                                 onSkip()
                                             }
                                         }
-=                                        hasNavigated = false
+                                        hasNavigated = false
                                         swipeDirection = null
                                     }
                                 )
