@@ -11,7 +11,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.LocalFireDepartment
+import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -28,12 +28,13 @@ import androidx.compose.ui.unit.sp
 import com.example.quizapp.data.Question
 import com.example.quizapp.ui.theme.*
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalAnimationApi::class)
 @Composable
 fun QuizScreen(
     uiState: QuizUiState,
     onSelectAnswer: (Int) -> Unit,
-    onSkip: () -> Unit
+    onSkip: () -> Unit,
+    onPrevious: () -> Unit
 ) {
     Box(
         modifier = Modifier
@@ -67,53 +68,124 @@ fun QuizScreen(
             ErrorState()
         } else {
             uiState.currentQuestion?.let { question ->
-                Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(20.dp)
-                        .pointerInput(Unit) {
-                            detectDragGestures { _, dragAmount ->
-                                if (dragAmount.x < -50) {
-                                    onSkip()
-                                }
+                var hasNavigated by remember { mutableStateOf(false) }
+                var swipeDirection by remember { mutableStateOf<Int?>(null) } // 1 for right, -1 for left
+
+                AnimatedContent(
+                    targetState = uiState.currentQuestionIndex,
+                    transitionSpec = {
+                        if (targetState > initialState) { // Next question
+                            slideInHorizontally(
+                                initialOffsetX = { it },
+                                animationSpec = tween(300)
+                            ) with slideOutHorizontally(
+                                targetOffsetX = { -it },
+                                animationSpec = tween(300)
+                            )
+                        } else { // Previous question
+                            slideInHorizontally(
+                                initialOffsetX = { -it },
+                                animationSpec = tween(300)
+                            ) with slideOutHorizontally(
+                                targetOffsetX = { it },
+                                animationSpec = tween(300)
+                            )
+                        }
+                    },
+                    label = "questionTransition"
+                ) { _ ->
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(20.dp)
+                            .pointerInput(Unit) {
+
+                                detectDragGestures(
+                                    onDrag = { _, dragAmount ->
+                                        if (!uiState.isAnswerRevealed) {
+                                            if (!hasNavigated && dragAmount.x > 50) {
+                                                hasNavigated = true
+                                                swipeDirection = 1
+                                            }
+                                            else if (!hasNavigated && dragAmount.x < -50) {
+                                                hasNavigated = true
+                                                swipeDirection = -1
+                                            }
+                                        }
+                                    },
+                                    onDragEnd = {
+                                        if (hasNavigated) {
+                                            if (swipeDirection == 1) {
+                                                onPrevious()
+                                            } else if (swipeDirection == -1) {
+                                                onSkip()
+                                            }
+                                        }
+=                                        hasNavigated = false
+                                        swipeDirection = null
+                                    }
+                                )
+                            }
+                    ) {
+                        LinearProgressIndicator(
+                            progress = (uiState.currentQuestionIndex + 1).toFloat() / uiState.questions.size,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(6.dp)
+                                .clip(RoundedCornerShape(3.dp)),
+                            color = QuizDarkPrimary,
+                            trackColor = QuizDarkSurface
+                        )
+
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        QuestionHeader(
+                            questionNumber = uiState.currentQuestionIndex + 1,
+                            totalQuestions = uiState.questions.size,
+                            currentStreak = uiState.currentStreak
+                        )
+
+                        Spacer(modifier = Modifier.height(32.dp))
+
+                        QuestionCard(question = question.question)
+
+                        Spacer(modifier = Modifier.height(40.dp))
+
+                        OptionsList(
+                            question = question,
+                            selectedAnswer = uiState.selectedAnswer,
+                            isRevealed = uiState.isAnswerRevealed,
+                            onOptionSelected = onSelectAnswer
+                        )
+
+                        Spacer(modifier = Modifier.weight(1f))
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            TextButton(
+                                onClick = onPrevious,
+                                enabled = uiState.currentQuestionIndex > 0
+                            ) {
+                                Text(
+                                    text = "← Previous",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    color = if (uiState.currentQuestionIndex > 0) QuizDarkPrimary else Color.Gray
+                                )
+                            }
+
+                            TextButton(
+                                onClick = onSkip
+                            ) {
+                                Text(
+                                    text = "Skip →",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    color = QuizDarkOnSurface.copy(alpha = 0.6f)
+                                )
                             }
                         }
-                ) {
-                    // Progress Bar
-                    LinearProgressIndicator(
-                        progress = (uiState.currentQuestionIndex + 1).toFloat() / uiState.questions.size,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(6.dp)
-                            .clip(RoundedCornerShape(3.dp)),
-                        color = QuizDarkPrimary,
-                        trackColor = QuizDarkSurface
-                    )
-
-                    Spacer(modifier = Modifier.height(16.dp))
-
-                    QuestionHeader(
-                        questionNumber = uiState.currentQuestionIndex + 1,
-                        totalQuestions = uiState.questions.size,
-                        currentStreak = uiState.currentStreak
-                    )
-
-                    Spacer(modifier = Modifier.height(32.dp))
-
-                    QuestionCard(question = question.question)
-
-                    Spacer(modifier = Modifier.height(40.dp))
-
-                    OptionsList(
-                        question = question,
-                        selectedAnswer = uiState.selectedAnswer,
-                        isRevealed = uiState.isAnswerRevealed,
-                        onOptionSelected = onSelectAnswer
-                    )
-
-                    Spacer(modifier = Modifier.weight(1f))
-
-                    SkipButton(onSkipClicked = onSkip)
+                    }
                 }
             }
         }
@@ -207,7 +279,7 @@ fun StreakCounter(streak: Int) {
         horizontalArrangement = Arrangement.Center
     ) {
         Icon(
-            imageVector = Icons.Default.LocalFireDepartment,
+            imageVector = Icons.Default.Favorite,
             contentDescription = "Streak",
             tint = if (isActive) Color.White else QuizDarkOnSurface.copy(alpha = 0.5f),
             modifier = Modifier.size(20.dp)
@@ -392,27 +464,10 @@ fun OptionButton(
                     !isRevealed -> QuizDarkOnSurface
                     isCorrect -> CorrectGreen
                     isSelected && !isCorrect -> IncorrectRed
-                    else -> Color.Black
+                    else -> Color.Gray
                 },
                 modifier = Modifier.weight(1f)
             )
         }
-    }
-}
-
-@Composable
-fun SkipButton(onSkipClicked: () -> Unit) {
-    TextButton(
-        onClick = onSkipClicked,
-        modifier = Modifier.fillMaxWidth(),
-        colors = ButtonDefaults.textButtonColors(
-            contentColor = QuizDarkOnSurface.copy(alpha = 0.6f)
-        )
-    ) {
-        Text(
-            text = "Skip Question →",
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.Medium
-        )
     }
 }

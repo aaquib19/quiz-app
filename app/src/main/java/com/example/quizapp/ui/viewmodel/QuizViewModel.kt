@@ -82,6 +82,19 @@ class QuizViewModel(private val repository: QuizRepository = QuizRepository()) :
         }
     }
 
+    fun previousQuestion() {
+        val currentState = _uiState.value
+        if (currentState.currentQuestionIndex > 0) {
+            _uiState.update {
+                it.copy(
+                    currentQuestionIndex = it.currentQuestionIndex - 1,
+                    selectedAnswer = null,
+                    isAnswerRevealed = false
+                )
+            }
+        }
+    }
+
     fun resetQuiz() {
         _uiState.update {
             it.copy(

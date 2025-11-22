@@ -28,7 +28,8 @@ fun QuizNavigation(quizViewModel: QuizViewModel) {
             QuizScreen(
                 uiState = uiState,
                 onSelectAnswer = { quizViewModel.selectAnswer(it) },
-                onSkip = { quizViewModel.skipQuestion() }
+                onSkip = { quizViewModel.skipQuestion() },
+                onPrevious = { quizViewModel.previousQuestion() }
             )
         }
         composable("results") {
