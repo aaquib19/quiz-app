@@ -30,10 +30,7 @@ class QuizViewModel(private val repository: QuizRepository) : ViewModel() {
                 progress?.let {
                     _uiState.update { currentState ->
                         currentState.copy(
-                            currentQuestionIndex = it.lastQuestionIndex,
-                            correctAnswersCount = it.score,
-                            longestStreak = it.longestStreak,
-                            skippedQuestionsCount = it.skippedQuestions
+                            currentQuestionIndex = it.lastQuestionIndex
                         )
                     }
                 }

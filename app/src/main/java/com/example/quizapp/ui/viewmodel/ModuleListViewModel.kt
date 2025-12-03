@@ -24,7 +24,6 @@ class ModuleListViewModel(private val repository: QuizRepository) : ViewModel() 
             try {
                 val modules = repository.getModules()
 
-                // Collect progress for all modules
                 repository.getAllProgress().collect { progressList ->
                     val modulesWithProgress = modules.map { module ->
                         val progress = progressList.find { it.moduleId == module.id }
