@@ -187,7 +187,7 @@ class QuizViewModel(private val repository: QuizRepository) : ViewModel() {
         saveCurrentProgress()
 
         viewModelScope.launch {
-            delay(2000)
+            delay(700)
             nextQuestion()
         }
     }
