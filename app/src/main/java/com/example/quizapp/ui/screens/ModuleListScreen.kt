@@ -112,6 +112,11 @@ fun ModuleCard(
     val module = moduleWithProgress.module
     val progress = moduleWithProgress.progress
 
+    val buttonText = when {
+        progress == null -> "Start"
+        else -> "Review"
+    }
+
     Card(
         modifier = Modifier.fillMaxWidth(),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
@@ -124,7 +129,6 @@ fun ModuleCard(
                 .fillMaxWidth()
                 .padding(16.dp)
         ) {
-            // Title - with null safety
             Text(
                 text = module.title ?: "Unknown Module",
                 style = MaterialTheme.typography.titleLarge,
@@ -133,14 +137,12 @@ fun ModuleCard(
 
             Spacer(modifier = Modifier.height(4.dp))
 
-            // Description - with null safety
             Text(
                 text = module.description ?: "No description available",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
 
-            // Progress info - only if progress exists
             if (progress != null) {
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
@@ -152,7 +154,6 @@ fun ModuleCard(
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // Button
             Button(
                 onClick = { onModuleClick(module.id, module.questions_url) },
                 modifier = Modifier.align(Alignment.End),
@@ -160,7 +161,7 @@ fun ModuleCard(
                     containerColor = QuizDarkPrimary
                 )
             ) {
-                Text(if (progress?.isCompleted == true) "Review" else "Start")
+                Text(buttonText)
             }
         }
     }
