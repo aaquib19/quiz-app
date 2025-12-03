@@ -3,6 +3,7 @@ package com.example.quizapp.ui.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.quizapp.data.QuizRepository
+import com.example.quizapp.data.local.ModuleProgressEntity
 import com.example.quizapp.ui.theme.QuizUiState
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -10,20 +11,19 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-class QuizViewModel(private val repository: QuizRepository = QuizRepository()) : ViewModel() {
+class QuizViewModel(private val repository: QuizRepository) : ViewModel() {
 
     private val _uiState = MutableStateFlow(QuizUiState())
-
     val uiState = _uiState.asStateFlow()
 
-    init {
-        loadQuestions()
-    }
+    private var currentModuleId: String? = null
 
-    private fun loadQuestions() {
+    fun loadQuestionsForModule(moduleId: String, questionsUrl: String) {
+        currentModuleId = moduleId
         viewModelScope.launch {
+            _uiState.update { it.copy(isLoading = true) }
             try {
-                val questions = repository.getQuestions()
+                val questions = repository.getQuestionsForModule(questionsUrl)
                 _uiState.update { it.copy(isLoading = false, questions = questions) }
             } catch (e: Exception) {
                 _uiState.update { it.copy(isLoading = false) }
@@ -36,11 +36,13 @@ class QuizViewModel(private val repository: QuizRepository = QuizRepository()) :
         if (currentState.isAnswerRevealed) return
 
         _uiState.update {
-            it.copy(selectedAnswer = currentState.currentQuestion?.options?.get(selectedOptionIndex), isAnswerRevealed = true)
+            it.copy(
+                selectedAnswer = currentState.currentQuestion?.options?.get(selectedOptionIndex),
+                isAnswerRevealed = true
+            )
         }
 
         val correctIndex = currentState.currentQuestion?.correctOptionIndex
-
         val isCorrect = selectedOptionIndex == correctIndex
 
         if (isCorrect) {
@@ -61,6 +63,7 @@ class QuizViewModel(private val repository: QuizRepository = QuizRepository()) :
             nextQuestion()
         }
     }
+
     fun skipQuestion() {
         _uiState.update { it.copy(skippedQuestionsCount = it.skippedQuestionsCount + 1) }
         nextQuestion()
@@ -77,7 +80,6 @@ class QuizViewModel(private val repository: QuizRepository = QuizRepository()) :
                 )
             }
         } else {
-            // Quiz is finished
             _uiState.update { it.copy(isQuizFinished = true) }
         }
     }
@@ -95,18 +97,29 @@ class QuizViewModel(private val repository: QuizRepository = QuizRepository()) :
         }
     }
 
+    fun saveProgressAndFinish(onSaved: () -> Unit) {
+        viewModelScope.launch {
+            currentModuleId?.let { moduleId ->
+                val state = _uiState.value
+                val progress = ModuleProgressEntity(
+                    moduleId = moduleId,
+                    score = state.correctAnswersCount,
+                    totalQuestions = state.questions.size,
+                    longestStreak = state.longestStreak,
+                    skippedQuestions = state.skippedQuestionsCount,
+                    isCompleted = true,
+                    completedAt = System.currentTimeMillis()
+                )
+                repository.saveModuleProgress(progress)
+                onSaved()
+            }
+        }
+    }
+
     fun resetQuiz() {
         _uiState.update {
-            it.copy(
-                currentQuestionIndex = 0,
-                selectedAnswer = null,
-                isAnswerRevealed = false,
-                currentStreak = 0,
-                longestStreak = 0,
-                correctAnswersCount = 0,
-                skippedQuestionsCount = 0,
-                isQuizFinished = false
-            )
+            QuizUiState()
         }
+        currentModuleId = null
     }
 }
