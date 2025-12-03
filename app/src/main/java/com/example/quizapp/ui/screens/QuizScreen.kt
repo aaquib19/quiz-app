@@ -33,6 +33,7 @@ import com.example.quizapp.ui.theme.*
 fun QuizScreen(
     uiState: QuizUiState,
     onSelectAnswer: (Int) -> Unit,
+    onSubmitQuiz: () -> Unit,
     onSkip: () -> Unit,
     onPrevious: () -> Unit
 ) {
@@ -68,8 +69,9 @@ fun QuizScreen(
             ErrorState()
         } else {
             uiState.currentQuestion?.let { question ->
+                val isLastQuestion = uiState.currentQuestionIndex == uiState.questions.size - 1
                 var hasNavigated by remember { mutableStateOf(false) }
-                var swipeDirection by remember { mutableStateOf<Int?>(null) } // 1 for right, -1 for left
+                var swipeDirection by remember { mutableStateOf<Int?>(null) }
 
                 AnimatedContent(
                     targetState = uiState.currentQuestionIndex,
@@ -99,7 +101,6 @@ fun QuizScreen(
                             .fillMaxSize()
                             .padding(20.dp)
                             .pointerInput(Unit) {
-
                                 detectDragGestures(
                                     onDrag = { _, dragAmount ->
                                         if (!uiState.isAnswerRevealed) {
@@ -160,28 +161,51 @@ fun QuizScreen(
 
                         Spacer(modifier = Modifier.weight(1f))
 
+                        // Always show all three buttons
                         Row(
                             modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
                             TextButton(
                                 onClick = onPrevious,
-                                enabled = uiState.currentQuestionIndex > 0
+                                enabled = uiState.currentQuestionIndex > 0 && !uiState.isAnswerRevealed
                             ) {
                                 Text(
                                     text = "← Previous",
                                     style = MaterialTheme.typography.titleMedium,
-                                    color = if (uiState.currentQuestionIndex > 0) QuizDarkPrimary else Color.Gray
+                                    color = if (uiState.currentQuestionIndex > 0 && !uiState.isAnswerRevealed) QuizDarkPrimary else Color.Gray
+                                )
+                            }
+
+                            Button(
+                                onClick = onSubmitQuiz,
+                                // Enable if the user has made any progress (answered or skipped)
+                                enabled = (uiState.correctAnswersCount > 0 || uiState.skippedQuestionsCount > 0),
+                                modifier = Modifier
+                                    .height(48.dp)
+                                    .width(120.dp),
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = QuizDarkPrimary,
+                                    disabledContainerColor = QuizDarkPrimary.copy(alpha = 0.5f)
+                                )
+                            ) {
+                                Text(
+                                    text = "Submit",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    color = QuizDarkOnPrimary
                                 )
                             }
 
                             TextButton(
-                                onClick = onSkip
+                                onClick = onSkip,
+                                // Disable on the last question since there is no "next" question
+                                enabled = !uiState.isAnswerRevealed && !isLastQuestion
                             ) {
                                 Text(
-                                    text = "Skip →",
+                                    text = "Next →",
                                     style = MaterialTheme.typography.titleMedium,
-                                    color = QuizDarkOnSurface.copy(alpha = 0.6f)
+                                    color = if (!uiState.isAnswerRevealed && !isLastQuestion) QuizDarkOnSurface.copy(alpha = 0.6f) else Color.Gray
                                 )
                             }
                         }
@@ -191,6 +215,8 @@ fun QuizScreen(
         }
     }
 }
+
+// --- The rest of the composables in this file remain the same ---
 
 @Composable
 fun ErrorState() {

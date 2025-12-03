@@ -31,7 +31,6 @@ fun QuizNavigation(
                 uiState = moduleListState,
                 onModuleClick = { moduleId, questionsUrl ->
                     quizViewModel.resetQuiz()
-                    // URL encode the questionsUrl
                     val encodedUrl = Uri.encode(questionsUrl)
                     navController.navigate("quiz/$moduleId/$encodedUrl")
                 }
@@ -47,7 +46,6 @@ fun QuizNavigation(
         ) { backStackEntry ->
             val moduleId = backStackEntry.arguments?.getString("moduleId") ?: return@composable
             val encodedUrl = backStackEntry.arguments?.getString("questionsUrl") ?: return@composable
-            // URL decode the questionsUrl
             val questionsUrl = Uri.decode(encodedUrl)
 
             LaunchedEffect(moduleId) {
@@ -57,6 +55,8 @@ fun QuizNavigation(
             QuizScreen(
                 uiState = quizState,
                 onSelectAnswer = { quizViewModel.selectAnswer(it) },
+                // UPDATED: Use the new manual submission function
+                onSubmitQuiz = { quizViewModel.submitQuizAndFinish() },
                 onSkip = { quizViewModel.skipQuestion() },
                 onPrevious = { quizViewModel.previousQuestion() }
             )

@@ -80,7 +80,8 @@ class QuizViewModel(private val repository: QuizRepository) : ViewModel() {
                 )
             }
         } else {
-            _uiState.update { it.copy(isQuizFinished = true) }
+            // CHANGED: Do not automatically finish the quiz on the last question.
+            // Wait for the user to press the "Submit" button.
         }
     }
 
@@ -95,6 +96,11 @@ class QuizViewModel(private val repository: QuizRepository) : ViewModel() {
                 )
             }
         }
+    }
+
+    // ADDED: A new function to manually finish the quiz.
+    fun submitQuizAndFinish() {
+        _uiState.update { it.copy(isQuizFinished = true) }
     }
 
     fun saveProgressAndFinish(onSaved: () -> Unit) {
