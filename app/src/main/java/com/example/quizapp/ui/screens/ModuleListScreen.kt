@@ -12,6 +12,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.quizapp.ui.theme.ModuleListUiState
 import com.example.quizapp.ui.theme.ModuleWithProgress
+import com.example.quizapp.ui.theme.QuizDarkPrimary
 
 @Composable
 fun ModuleListScreen(
@@ -107,7 +108,7 @@ fun ModuleCard(
                 Text(
                     text = "${progress.totalQuestions} Questions | Score: ${progress.score}/${progress.totalQuestions}",
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.primary
+                    color = QuizDarkPrimary
                 )
             }
 
@@ -118,7 +119,7 @@ fun ModuleCard(
                 onClick = { onModuleClick(module.id, module.questions_url) },
                 modifier = Modifier.align(Alignment.End),
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.primary
+                    containerColor = QuizDarkPrimary
                 )
             ) {
                 Text(if (progress?.isCompleted == true) "Review" else "Start")
