@@ -103,15 +103,14 @@ fun QuizScreen(
                             .pointerInput(Unit) {
                                 detectDragGestures(
                                     onDrag = { _, dragAmount ->
-                                        if (!uiState.isAnswerRevealed) {
-                                            if (!hasNavigated && dragAmount.x > 50) {
-                                                hasNavigated = true
-                                                swipeDirection = 1
-                                            }
-                                            else if (!hasNavigated && dragAmount.x < -50) {
-                                                hasNavigated = true
-                                                swipeDirection = -1
-                                            }
+                                        // REMOVED: !uiState.isAnswerRevealed check
+                                        if (!hasNavigated && dragAmount.x > 50) {
+                                            hasNavigated = true
+                                            swipeDirection = 1
+                                        }
+                                        else if (!hasNavigated && dragAmount.x < -50) {
+                                            hasNavigated = true
+                                            swipeDirection = -1
                                         }
                                     },
                                     onDragEnd = {
@@ -169,12 +168,12 @@ fun QuizScreen(
                         ) {
                             TextButton(
                                 onClick = onPrevious,
-                                enabled = uiState.currentQuestionIndex > 0 && !uiState.isAnswerRevealed
+                                enabled = uiState.currentQuestionIndex > 0
                             ) {
                                 Text(
                                     text = "← Previous",
                                     style = MaterialTheme.typography.titleMedium,
-                                    color = if (uiState.currentQuestionIndex > 0 && !uiState.isAnswerRevealed) QuizDarkPrimary else Color.Gray
+                                    color = if (uiState.currentQuestionIndex > 0) QuizDarkPrimary else Color.Gray
                                 )
                             }
 
@@ -198,13 +197,16 @@ fun QuizScreen(
 
                             TextButton(
                                 onClick = onSkip,
-                                // Disable on the last question since there is no "next" question
-                                enabled = !uiState.isAnswerRevealed && !isLastQuestion
+                                // UPDATED: Allow next if it's already answered OR if not revealed yet
+                                enabled = (uiState.isAlreadyAnswered || !uiState.isAnswerRevealed) && !isLastQuestion
                             ) {
                                 Text(
                                     text = "Next →",
                                     style = MaterialTheme.typography.titleMedium,
-                                    color = if (!uiState.isAnswerRevealed && !isLastQuestion) QuizDarkOnSurface.copy(alpha = 0.6f) else Color.Gray
+                                    color = if ((uiState.isAlreadyAnswered || !uiState.isAnswerRevealed) && !isLastQuestion)
+                                        QuizDarkOnSurface.copy(alpha = 0.6f)
+                                    else
+                                        Color.Gray
                                 )
                             }
                         }

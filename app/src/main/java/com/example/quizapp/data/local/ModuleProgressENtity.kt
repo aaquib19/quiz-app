@@ -13,5 +13,7 @@ data class ModuleProgressEntity(
     val skippedQuestions: Int,
     val isCompleted: Boolean,
     val completedAt: Long,
-    val lastQuestionIndex: Int = 0
+    val lastQuestionIndex: Int = 0,
+    val answeredQuestions: String = "", // NEW: Store as comma-separated question indices
+    val userAnswers: String = "" // NEW: Store as comma-separated answer indices
 )

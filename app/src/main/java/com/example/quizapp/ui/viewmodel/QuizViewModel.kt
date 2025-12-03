@@ -24,15 +24,30 @@ class QuizViewModel(private val repository: QuizRepository) : ViewModel() {
             _uiState.update { it.copy(isLoading = true) }
             try {
                 val questions = repository.getQuestionsForModule(questionsUrl)
-                _uiState.update { it.copy(isLoading = false, questions = questions) }
-
                 val progress = repository.getModuleProgress(moduleId)
-                progress?.let {
-                    _uiState.update { currentState ->
-                        currentState.copy(
-                            currentQuestionIndex = it.lastQuestionIndex
+
+                if (progress != null && !progress.isCompleted) {
+                    // Resume from saved progress
+                    val userAnswers = parseUserAnswers(progress.userAnswers, progress.answeredQuestions)
+
+                    _uiState.update {
+                        it.copy(
+                            isLoading = false,
+                            questions = questions,
+                            currentQuestionIndex = progress.lastQuestionIndex,
+                            correctAnswersCount = progress.score,
+                            longestStreak = progress.longestStreak,
+                            skippedQuestionsCount = progress.skippedQuestions,
+                            userAnswers = userAnswers,
+                            currentStreak = 0
                         )
                     }
+
+                    // Check if current question was already answered
+                    checkIfQuestionAlreadyAnswered()
+                } else {
+                    // Fresh start
+                    _uiState.update { it.copy(isLoading = false, questions = questions) }
                 }
 
             } catch (e: Exception) {
@@ -45,10 +60,18 @@ class QuizViewModel(private val repository: QuizRepository) : ViewModel() {
         val currentState = _uiState.value
         if (currentState.isAnswerRevealed) return
 
+        val currentQuestionIndex = currentState.currentQuestionIndex
+
+        // Check if this question was already answered
+        if (currentState.userAnswers.containsKey(currentQuestionIndex)) {
+            return
+        }
+
         _uiState.update {
             it.copy(
                 selectedAnswer = currentState.currentQuestion?.options?.get(selectedOptionIndex),
-                isAnswerRevealed = true
+                isAnswerRevealed = true,
+                userAnswers = it.userAnswers + (currentQuestionIndex to selectedOptionIndex)
             )
         }
 
@@ -68,6 +91,8 @@ class QuizViewModel(private val repository: QuizRepository) : ViewModel() {
             _uiState.update { it.copy(currentStreak = 0) }
         }
 
+        saveCurrentProgress()
+
         viewModelScope.launch {
             delay(2000)
             nextQuestion()
@@ -76,6 +101,7 @@ class QuizViewModel(private val repository: QuizRepository) : ViewModel() {
 
     fun skipQuestion() {
         _uiState.update { it.copy(skippedQuestionsCount = it.skippedQuestionsCount + 1) }
+        saveCurrentProgress()
         nextQuestion()
     }
 
@@ -86,11 +112,28 @@ class QuizViewModel(private val repository: QuizRepository) : ViewModel() {
                 it.copy(
                     currentQuestionIndex = it.currentQuestionIndex + 1,
                     selectedAnswer = null,
-                    isAnswerRevealed = false
+                    isAnswerRevealed = false,
+                    isAlreadyAnswered = false // RESET flag when moving
                 )
             }
-        } else {
-            // Do not automatically finish the quiz on the last question.
+            saveCurrentProgress()
+            checkIfQuestionAlreadyAnswered()
+        }
+    }
+
+    private fun checkIfQuestionAlreadyAnswered() {
+        val currentState = _uiState.value
+        val currentQuestionIndex = currentState.currentQuestionIndex
+
+        if (currentState.userAnswers.containsKey(currentQuestionIndex)) {
+            val selectedOptionIndex = currentState.userAnswers[currentQuestionIndex]!!
+            _uiState.update {
+                it.copy(
+                    selectedAnswer = currentState.currentQuestion?.options?.get(selectedOptionIndex),
+                    isAnswerRevealed = true,
+                    isAlreadyAnswered = true
+                )
+            }
         }
     }
 
@@ -101,9 +144,12 @@ class QuizViewModel(private val repository: QuizRepository) : ViewModel() {
                 it.copy(
                     currentQuestionIndex = it.currentQuestionIndex - 1,
                     selectedAnswer = null,
-                    isAnswerRevealed = false
+                    isAnswerRevealed = false,
+                    isAlreadyAnswered = false // RESET flag when moving
                 )
             }
+            saveCurrentProgress()
+            checkIfQuestionAlreadyAnswered()
         }
     }
 
@@ -123,12 +169,52 @@ class QuizViewModel(private val repository: QuizRepository) : ViewModel() {
                     skippedQuestions = state.skippedQuestionsCount,
                     isCompleted = true,
                     completedAt = System.currentTimeMillis(),
-                    lastQuestionIndex = state.currentQuestionIndex
+                    lastQuestionIndex = state.currentQuestionIndex,
+                    answeredQuestions = serializeAnsweredQuestions(state.userAnswers),
+                    userAnswers = serializeUserAnswers(state.userAnswers)
                 )
                 repository.saveModuleProgress(progress)
                 onSaved()
             }
         }
+    }
+
+    private fun saveCurrentProgress() {
+        viewModelScope.launch {
+            currentModuleId?.let { moduleId ->
+                val state = _uiState.value
+                val progress = ModuleProgressEntity(
+                    moduleId = moduleId,
+                    score = state.correctAnswersCount,
+                    totalQuestions = state.questions.size,
+                    longestStreak = state.longestStreak,
+                    skippedQuestions = state.skippedQuestionsCount,
+                    isCompleted = false,
+                    completedAt = 0L,
+                    lastQuestionIndex = state.currentQuestionIndex,
+                    answeredQuestions = serializeAnsweredQuestions(state.userAnswers),
+                    userAnswers = serializeUserAnswers(state.userAnswers)
+                )
+                repository.saveModuleProgress(progress)
+            }
+        }
+    }
+
+    private fun serializeAnsweredQuestions(userAnswers: Map<Int, Int>): String {
+        return userAnswers.keys.sorted().joinToString(",")
+    }
+
+    private fun serializeUserAnswers(userAnswers: Map<Int, Int>): String {
+        return userAnswers.entries.sortedBy { it.key }.joinToString(",") { it.value.toString() }
+    }
+
+    private fun parseUserAnswers(userAnswersStr: String, answeredQuestionsStr: String): Map<Int, Int> {
+        if (userAnswersStr.isEmpty() || answeredQuestionsStr.isEmpty()) return emptyMap()
+
+        val questionIndices = answeredQuestionsStr.split(",").mapNotNull { it.toIntOrNull() }
+        val answerIndices = userAnswersStr.split(",").mapNotNull { it.toIntOrNull() }
+
+        return questionIndices.zip(answerIndices).toMap()
     }
 
     fun resetQuiz() {
