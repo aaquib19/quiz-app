@@ -16,6 +16,22 @@ import com.example.quizapp.ui.screens.ResultsScreen
 import com.example.quizapp.ui.viewmodel.ModuleListViewModel
 import com.example.quizapp.ui.viewmodel.QuizViewModel
 
+private object NavigationRoutes {
+    const val MODULE_LIST = "moduleList"
+    const val QUIZ = "quiz/{moduleId}/{questionsUrl}"
+    const val RESULTS = "results"
+
+    fun quiz(moduleId: String, questionsUrl: String): String {
+        val encodedUrl = Uri.encode(questionsUrl)
+        return "quiz/$moduleId/$encodedUrl"
+    }
+}
+
+private object NavigationArgs {
+    const val MODULE_ID = "moduleId"
+    const val QUESTIONS_URL = "questionsUrl"
+}
+
 @Composable
 fun QuizNavigation(
     moduleListViewModel: ModuleListViewModel,
@@ -25,27 +41,30 @@ fun QuizNavigation(
     val moduleListState by moduleListViewModel.uiState.collectAsState()
     val quizState by quizViewModel.uiState.collectAsState()
 
-    NavHost(navController = navController, startDestination = "moduleList") {
-        composable("moduleList") {
+    NavHost(
+        navController = navController,
+        startDestination = NavigationRoutes.MODULE_LIST
+    ) {
+        composable(NavigationRoutes.MODULE_LIST) {
             ModuleListScreen(
                 uiState = moduleListState,
                 onModuleClick = { moduleId, questionsUrl ->
-                    quizViewModel.resetQuiz()
-                    val encodedUrl = Uri.encode(questionsUrl)
-                    navController.navigate("quiz/$moduleId/$encodedUrl")
+                    navController.navigate(NavigationRoutes.quiz(moduleId, questionsUrl))
                 }
             )
         }
 
         composable(
-            route = "quiz/{moduleId}/{questionsUrl}",
+            route = NavigationRoutes.QUIZ,
             arguments = listOf(
-                navArgument("moduleId") { type = NavType.StringType },
-                navArgument("questionsUrl") { type = NavType.StringType }
+                navArgument(NavigationArgs.MODULE_ID) { type = NavType.StringType },
+                navArgument(NavigationArgs.QUESTIONS_URL) { type = NavType.StringType }
             )
         ) { backStackEntry ->
-            val moduleId = backStackEntry.arguments?.getString("moduleId") ?: return@composable
-            val encodedUrl = backStackEntry.arguments?.getString("questionsUrl") ?: return@composable
+            val moduleId = backStackEntry.arguments?.getString(NavigationArgs.MODULE_ID)
+                ?: return@composable
+            val encodedUrl = backStackEntry.arguments?.getString(NavigationArgs.QUESTIONS_URL)
+                ?: return@composable
             val questionsUrl = Uri.decode(encodedUrl)
 
             LaunchedEffect(moduleId) {
@@ -54,15 +73,19 @@ fun QuizNavigation(
 
             QuizScreen(
                 uiState = quizState,
-                onSelectAnswer = { quizViewModel.selectAnswer(it) },
-                // UPDATED: Use the new manual submission function
-                onSubmitQuiz = { quizViewModel.submitQuizAndFinish() },
-                onSkip = { quizViewModel.skipQuestion() },
-                onPrevious = { quizViewModel.previousQuestion() }
+                onSelectAnswer = quizViewModel::selectAnswer,
+                onExit = {
+                    quizViewModel.exitQuiz {
+                        navController.popBackStack()
+                    }
+                },
+                onSkip = quizViewModel::skipQuestion,
+                onPrevious = quizViewModel::previousQuestion,
+                viewModel = quizViewModel
             )
         }
 
-        composable("results") {
+        composable(NavigationRoutes.RESULTS) {
             ResultsScreen(
                 correctAnswers = quizState.correctAnswersCount,
                 totalQuestions = quizState.questions.size,
@@ -71,8 +94,8 @@ fun QuizNavigation(
                 onFinish = {
                     quizViewModel.saveProgressAndFinish {
                         moduleListViewModel.refreshModules()
-                        navController.navigate("moduleList") {
-                            popUpTo("moduleList") { inclusive = true }
+                        navController.navigate(NavigationRoutes.MODULE_LIST) {
+                            popUpTo(NavigationRoutes.MODULE_LIST) { inclusive = true }
                         }
                     }
                 }
@@ -82,8 +105,8 @@ fun QuizNavigation(
 
     LaunchedEffect(quizState.isQuizFinished) {
         if (quizState.isQuizFinished) {
-            navController.navigate("results") {
-                popUpTo("quiz/{moduleId}/{questionsUrl}") { inclusive = true }
+            navController.navigate(NavigationRoutes.RESULTS) {
+                popUpTo(NavigationRoutes.QUIZ) { inclusive = true }
             }
         }
     }

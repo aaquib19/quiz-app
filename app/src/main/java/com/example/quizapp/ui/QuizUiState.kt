@@ -11,10 +11,14 @@ data class QuizUiState(
     val currentStreak: Int = 0,
     val longestStreak: Int = 0,
     val correctAnswersCount: Int = 0,
-    val skippedQuestionsCount: Int = 0,
     val isQuizFinished: Boolean = false,
     val userAnswers: Map<Int, Int> = emptyMap(),
-    val isAlreadyAnswered: Boolean = false // NEW: Track if current question was previously answered
+    val isAlreadyAnswered: Boolean = false,
+    val isShowingResults: Boolean = false
 ) {
-    val currentQuestion: Question? get() = questions.getOrNull(currentQuestionIndex)
+    val currentQuestion: Question?
+        get() = questions.getOrNull(currentQuestionIndex)
+
+    val skippedQuestionsCount: Int
+        get() = questions.size - userAnswers.size
 }

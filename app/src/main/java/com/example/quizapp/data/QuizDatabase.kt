@@ -5,9 +5,17 @@ import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
 
-@Database(entities = [ModuleProgressEntity::class], version = 2, exportSchema = false) // CHANGED: version to 2
+@Database(
+    entities = [
+        ModuleProgressEntity::class,
+        UserAnswerEntity::class
+    ],
+    version = 5,
+    exportSchema = false
+)
 abstract class QuizDatabase : RoomDatabase() {
     abstract fun moduleProgressDao(): ModuleProgressDao
+    abstract fun userAnswerDao(): UserAnswerDao
 
     companion object {
         @Volatile
@@ -20,7 +28,7 @@ abstract class QuizDatabase : RoomDatabase() {
                     QuizDatabase::class.java,
                     "quiz_database"
                 )
-                    .fallbackToDestructiveMigration() // NEW: Add this
+                    .fallbackToDestructiveMigration()
                     .build()
                 INSTANCE = instance
                 instance
