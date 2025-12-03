@@ -25,6 +25,19 @@ class QuizViewModel(private val repository: QuizRepository) : ViewModel() {
             try {
                 val questions = repository.getQuestionsForModule(questionsUrl)
                 _uiState.update { it.copy(isLoading = false, questions = questions) }
+
+                val progress = repository.getModuleProgress(moduleId)
+                progress?.let {
+                    _uiState.update { currentState ->
+                        currentState.copy(
+                            currentQuestionIndex = it.lastQuestionIndex,
+                            correctAnswersCount = it.score,
+                            longestStreak = it.longestStreak,
+                            skippedQuestionsCount = it.skippedQuestions
+                        )
+                    }
+                }
+
             } catch (e: Exception) {
                 _uiState.update { it.copy(isLoading = false) }
             }
@@ -80,8 +93,7 @@ class QuizViewModel(private val repository: QuizRepository) : ViewModel() {
                 )
             }
         } else {
-            // CHANGED: Do not automatically finish the quiz on the last question.
-            // Wait for the user to press the "Submit" button.
+            // Do not automatically finish the quiz on the last question.
         }
     }
 
@@ -98,7 +110,6 @@ class QuizViewModel(private val repository: QuizRepository) : ViewModel() {
         }
     }
 
-    // ADDED: A new function to manually finish the quiz.
     fun submitQuizAndFinish() {
         _uiState.update { it.copy(isQuizFinished = true) }
     }
@@ -114,7 +125,8 @@ class QuizViewModel(private val repository: QuizRepository) : ViewModel() {
                     longestStreak = state.longestStreak,
                     skippedQuestions = state.skippedQuestionsCount,
                     isCompleted = true,
-                    completedAt = System.currentTimeMillis()
+                    completedAt = System.currentTimeMillis(),
+                    lastQuestionIndex = state.currentQuestionIndex
                 )
                 repository.saveModuleProgress(progress)
                 onSaved()

@@ -180,8 +180,7 @@ fun QuizScreen(
 
                             Button(
                                 onClick = onSubmitQuiz,
-                                // Enable if the user has made any progress (answered or skipped)
-                                enabled = (uiState.correctAnswersCount > 0 || uiState.skippedQuestionsCount > 0),
+                                enabled = true,
                                 modifier = Modifier
                                     .height(48.dp)
                                     .width(120.dp),

@@ -12,5 +12,6 @@ data class ModuleProgressEntity(
     val longestStreak: Int,
     val skippedQuestions: Int,
     val isCompleted: Boolean,
-    val completedAt: Long
+    val completedAt: Long,
+    val lastQuestionIndex: Int = 0
 )

@@ -39,6 +39,10 @@ android {
     composeOptions {
         kotlinCompilerExtensionVersion = "1.5.4"
     }
+    ksp {
+        // Tells KSP where to find Room's schema files
+        arg("room.schemaLocation", "$projectDir/schemas")
+    }
 }
 
 dependencies {
