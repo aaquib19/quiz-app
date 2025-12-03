@@ -9,6 +9,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.example.quizapp.ui.theme.ModuleListUiState
 import com.example.quizapp.ui.theme.ModuleWithProgress
@@ -43,11 +44,48 @@ fun ModuleListScreen(
             }
 
             uiState.error != null -> {
-                Text(
-                    text = "Error: ${uiState.error}",
-                    color = MaterialTheme.colorScheme.error,
-                    modifier = Modifier.padding(16.dp)
-                )
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier.padding(32.dp)
+                    ) {
+                        val errorMessage = when {
+                            uiState.error.contains("Unable to resolve host", ignoreCase = true) ->
+                                "Internet Connection Required"
+                            uiState.error.contains("timeout", ignoreCase = true) ->
+                                "Connection Timeout"
+                            else ->
+                                "Error"
+                        }
+
+                        val errorDescription = when {
+                            uiState.error.contains("Unable to resolve host", ignoreCase = true) ->
+                                "Please check your internet connection and restart the app."
+                            uiState.error.contains("timeout", ignoreCase = true) ->
+                                "The server is taking too long to respond. Please try again."
+                            else ->
+                                uiState.error
+                        }
+
+                        Text(
+                            text = errorMessage,
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Bold,
+                            textAlign = TextAlign.Center,
+                            color = MaterialTheme.colorScheme.error
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = errorDescription,
+                            style = MaterialTheme.typography.bodyMedium,
+                            textAlign = TextAlign.Center,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
             }
 
             else -> {
