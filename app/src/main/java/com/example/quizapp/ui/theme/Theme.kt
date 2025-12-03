@@ -36,7 +36,7 @@ fun QuizAppTheme(
         }
 
         darkTheme -> DarkColorScheme
-        else -> DarkColorScheme // We are forcing a dark theme
+        else -> DarkColorScheme
     }
     val view = LocalView.current
     if (!view.isInEditMode) {

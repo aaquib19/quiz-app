@@ -14,7 +14,6 @@ interface UserAnswerDao {
     @Query("SELECT * FROM user_answer WHERE moduleId = :moduleId")
     fun getAnswersForModule(moduleId: String): Flow<List<UserAnswerEntity>>
 
-    // ADD THIS - non-Flow version for reliable immediate access
     @Query("SELECT * FROM user_answer WHERE moduleId = :moduleId")
     suspend fun getAnswersForModuleSync(moduleId: String): List<UserAnswerEntity>
 
